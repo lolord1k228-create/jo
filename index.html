@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lord1k Casino Online</title>
+    
+    <!-- Подключение Firebase -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
+    <style>
+        body {
+            background: radial-gradient(circle, #1a1a1a, #000);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: white;
+            touch-action: manipulation;
+        }
+
+        /* Карточки */
+        #auth-container, .card {
+            background: #111;
+            padding: 30px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 0 35px rgba(255, 215, 0, 0.3);
+            width: 90%;
+            max-width: 320px;
+            border: 1px solid #222;
+            box-sizing: border-box;
+        }
+
+        h2 { color: gold; margin-top: 0; font-size: 24px; }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: #000;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        /* Кнопка входа */
+        .auth-btn {
+            width: 100%;
+            height: 55px;
+            background: #28a745;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 4px 0 #1e7e34;
+        }
+
+        .auth-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1e7e34; }
+
+        /* Рулетка */
+        .wheel-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 20px auto;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(red 0deg 160deg, black 160deg 320deg, green 320deg 360deg);
+            transition: transform 3s cubic-bezier(0.15, 0, 0.2, 1);
+            border: 6px solid #222;
+            box-shadow: inset 0 0 15px #000;
+        }
+
+        /* Стрелка внизу */
+        .pointer {
+            width: 0; height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 25px solid gold;
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Кнопки ставок */
+        .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button { padding: 14px; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+        .red { background: #dc3545; }
+        .black { background: #212529; border: 1px solid #444; }
+        .green-bet { background: #28a745; grid-column: span 2; }
+
+        .logout { color: gold; cursor: pointer; font-size: 12px; text-decoration: underline; margin-top: 10px; display: block; }
+        
+        #admin-panel { display: none; background: #1a1a1a; border: 1px dashed gold; margin-top: 20px; padding: 10px; border-radius: 12px; }
+        .admin-btn { background: gold; color: black; width: 100%; padding: 8px; border: none; font-weight: bold; margin-bottom: 5px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- ВХОД -->
+    <div id="auth-container">
+        <h2>Вхід Lord1k</h2>
+        <input type="text" id="username" placeholder="Логін">
+        <input type="password" id="password" placeholder="Пароль">
+        <button class="auth-btn" id="login-btn" onclick="handleAuth()">УВІЙТИ</button>
+    </div>
+
+    <!-- ИГРА -->
+    <div class="card" id="game-card" style="display: none;">
+        <div style="font-size: 13px; color: #888;">
+            👤 <span id="display-name" style="color: gold;"></span> | 
+            <span class="logout" onclick="location.reload()">Вийти</span>
+        </div>
+
+        <div class="wheel-container">
+            <div id="wheel" class="wheel"></div>
+            <div class="pointer"></div>
+        </div>
+
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+            <span id="balance">0</span> 💰
+        </div>
+
+        <input type="number" id="bet" value="100" inputmode="numeric">
+
+        <div class="buttons">
+            <button class="red" onclick="spin('red')">RED</button>
+            <button class="black" onclick="spin('black')">BLACK</button>
+            <button class="green-bet" onclick="spin('green')">ZERO (x5)</button>
+        </div>
+
+        <!-- СЕКРЕТНОЕ ПОЛЕ (lordaddadmin) -->
+        <input type="password" id="admin-code" placeholder="Admin code" oninput="checkAdmin()" style="margin-top: 25px; opacity: 0.2; font-size: 10px;">
+
+        <div id="admin-panel">
+            <button class="admin-btn" onclick="addMoney(10000)">+10,000 МОНЕТ</button>
+            <button class="admin-btn" onclick="setNext('green')">НАСТУПНИЙ: ZERO</button>
+        </div>
+
+        <div id="result" style="margin-top: 15px; font-weight: bold; min-height: 20px;"></div>
+    </div>
+
+<script>
+    // --- ТВОИ ДАННЫЕ ИЗ СКРИНШОТА ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAkP8SSkWkyW8B0Z0uYIZvI_u07tfTC3bbg",
+        authDomain: "://firebaseapp.com",
+        databaseURL: "https://firebasedatabase.app",
+        projectId: "casinonom",
+        storageBucket: "casinonom.firebasestorage.app",
+        messagingSenderId: "136038485273",
+        appId: "1:136038485273:web:d2c09cb4a87332eb5f1480",
+        measurementId: "G-275553QC1S"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentUser = null;
+    let balance = 0;
+    let currentRotation = 0;
+    let isSpinning = false;
+    let riggedResult = null;
+
+    async function handleAuth() {
+        const user = document.getElementById("username").value.trim().toLowerCase();
+        const pass = document.getElementById("password").value.trim();
+        const btn = document.getElementById("login-btn");
+
+        if (!user || !pass) return alert("Заповніть поля!");
+
+        btn.innerText = "З'ЄДНАННЯ...";
+        btn.disabled = true;
+
+        try {
+            const snap = await db.ref('users/' + user).once('value');
+            const data = snap.val();
+
+            if (data) {
+                if (data.password === pass) login(user, data.balance);
+                else { alert("Невірний пароль!"); resetBtn(); }
+            } else {
+                await db.ref('users/' + user).set({ password: pass, balance: 1000 });
+                login(user, 1000);
+            }
+        } catch (e) {
+            alert("Помилка Firebase! Перевірте Rules (Правила) у консолі.");
+            resetBtn();
+        }
+    }
+
+    function resetBtn() {
+        const btn = document.getElementById("login-btn");
+        btn.innerText = "УВІЙТИ";
+        btn.disabled = false;
+    }
+
+    function login(user, bal) {
+        currentUser = user;
+        balance = bal;
+        document.getElementById("auth-container").style.display = "none";
+        document.getElementById("game-card").style.display = "block";
+        document.getElementById("display-name").innerText = user;
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById("balance").innerText = balance;
+        if(currentUser) db.ref('users/' + currentUser).update({ balance: balance });
+    }
+
+    function checkAdmin() {
+        const code = document.getElementById("admin-code").value;
+        document.getElementById("admin-panel").style.display = (code === "lordaddadmin") ? "block" : "none";
+    }
+
+    function addMoney(n) { balance += n; updateUI(); }
+    function setNext(res) { riggedResult = res; alert("Готово: " + res); }
+
+    function spin(choice) {
+        if (isSpinning) return;
+        let bet = parseInt(document.getElementById("bet").value);
+        if (bet > balance || bet <= 0) return alert("Мало монет!");
+
+        isSpinning = true;
+        balance -= bet;
+        updateUI();
+
+        let extra;
+        if (riggedResult === 'green') extra = 1800 + 340;
+        else if (riggedResult === 'red') extra = 1800 + 80;
+        else extra = 1800 + Math.floor(Math.random() * 360);
+        
+        riggedResult = null;
+        currentRotation += extra;
+        document.getElementById("wheel").style.transform = `rotate(${currentRotation}deg)`;
+
+        setTimeout(() => {
+            let angle = (currentRotation + 180) % 360;
+            let res = (angle < 160) ? "red" : (angle < 320 ? "black" : "green");
+
+            if (choice === res) {
+                let win = (res === 'green') ? bet * 5 : bet * 2;
+                balance += win;
+                document.getElementById("result").innerText = "ВИГРАШ: +" + win;
+                document.getElementById("result").style.color = "#4ade80";
+            } else {
+                document.getElementById("result").innerText = "ВИПАЛО: " + res.toUpperCase();
+                document.getElementById("result").style.color = "white";
+            }
+            updateUI();
+            isSpinning = false;
+        }, 3000);
+    }
+</script>
+</body>
+</html>
